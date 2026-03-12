@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getProducts, addProduct, deleteProduct, getAuth, categories, Product } from "@/data/products";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import TopBanner from "@/components/TopBanner";
 import Header from "@/components/Header";
-import { Trash2, Plus, Package } from "lucide-react";
+import { Trash2, Plus, Package, Upload, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const Admin = () => {
@@ -15,12 +15,13 @@ const Admin = () => {
   const auth = getAuth();
   const [products, setProducts] = useState(getProducts());
   const [showForm, setShowForm] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: "",
     category: categories[0].name,
     price: "",
     originalPrice: "",
-    image: "",
     description: "",
     features: "",
     minOrder: "10",
@@ -38,6 +39,24 @@ const Admin = () => {
     );
   }
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDelete = (id: string) => {
     deleteProduct(id);
     setProducts(getProducts());
@@ -48,6 +67,10 @@ const Admin = () => {
     e.preventDefault();
     if (!form.name || !form.price || !form.originalPrice) {
       toast.error("Please fill required fields");
+      return;
+    }
+    if (!imagePreview) {
+      toast.error("Please upload a product image");
       return;
     }
 
@@ -62,7 +85,7 @@ const Admin = () => {
       price,
       originalPrice,
       discount,
-      image: form.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400",
+      image: imagePreview,
       description: form.description,
       features: form.features.split(",").map((f) => f.trim()).filter(Boolean),
       minOrder: Number(form.minOrder) || 10,
@@ -73,7 +96,8 @@ const Admin = () => {
     addProduct(newProduct);
     setProducts(getProducts());
     setShowForm(false);
-    setForm({ name: "", category: categories[0].name, price: "", originalPrice: "", image: "", description: "", features: "", minOrder: "10" });
+    setImagePreview(null);
+    setForm({ name: "", category: categories[0].name, price: "", originalPrice: "", description: "", features: "", minOrder: "10" });
     toast.success("Product added successfully!");
   };
 
@@ -89,27 +113,21 @@ const Admin = () => {
             <p className="text-muted-foreground">Manage your products</p>
           </div>
           <Button onClick={() => setShowForm(!showForm)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
+            <Plus className="h-4 w-4 mr-2" /> Add Product
           </Button>
         </div>
 
-        {/* Add Product Form */}
         {showForm && (
           <div className="bg-card rounded-xl shadow-card p-6 mb-8 border border-border">
             <h2 className="text-xl font-bold font-display text-foreground mb-4">New Product</h2>
             <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-foreground">Product Name *</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1" />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1" maxLength={200} />
               </div>
               <div>
                 <Label className="text-foreground">Category</Label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full mt-1 h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
+                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full mt-1 h-10 rounded-md border border-input bg-background px-3 text-sm">
                   {categories.map((c) => (
                     <option key={c.name} value={c.name}>{c.name}</option>
                   ))}
@@ -123,17 +141,44 @@ const Admin = () => {
                 <Label className="text-foreground">Original Price (₹) *</Label>
                 <Input type="number" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} className="mt-1" />
               </div>
-              <div>
-                <Label className="text-foreground">Image URL</Label>
-                <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://..." className="mt-1" />
+
+              {/* Image Upload */}
+              <div className="md:col-span-2">
+                <Label className="text-foreground">Product Image *</Label>
+                <div className="mt-1 flex items-start gap-4">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-32 h-32 rounded-xl border-2 border-dashed border-input bg-secondary hover:bg-muted flex flex-col items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+                  >
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <>
+                        <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+                        <span className="text-xs text-muted-foreground">Upload</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground pt-2">
+                    <p>Click to upload product image</p>
+                    <p className="text-xs mt-1">JPG, PNG, WebP · Max 5MB</p>
+                    {imagePreview && (
+                      <button type="button" onClick={() => { setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="text-xs text-destructive hover:underline mt-2">
+                        Remove image
+                      </button>
+                    )}
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </div>
               </div>
+
               <div>
                 <Label className="text-foreground">Min Order Qty</Label>
                 <Input type="number" value={form.minOrder} onChange={(e) => setForm({ ...form, minOrder: e.target.value })} className="mt-1" />
               </div>
               <div className="md:col-span-2">
                 <Label className="text-foreground">Description</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1" />
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1" maxLength={1000} />
               </div>
               <div className="md:col-span-2">
                 <Label className="text-foreground">Features (comma separated)</Label>
@@ -141,13 +186,12 @@ const Admin = () => {
               </div>
               <div className="md:col-span-2 flex gap-3">
                 <Button type="submit" className="bg-primary text-primary-foreground">Save Product</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => { setShowForm(false); setImagePreview(null); }}>Cancel</Button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Product List */}
         <div className="bg-card rounded-xl shadow-card overflow-hidden border border-border">
           <div className="overflow-x-auto">
             <table className="w-full">
