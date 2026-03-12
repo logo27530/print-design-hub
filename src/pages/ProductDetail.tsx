@@ -1,7 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import { getProducts, getWishlist, toggleWishlist } from "@/data/products";
+import { addToCart } from "@/data/cart";
 import { useState } from "react";
-import { Heart, ArrowLeft, Star, Truck, Shield, RotateCcw } from "lucide-react";
+import { Heart, ArrowLeft, Star, Truck, Shield, RotateCcw, ShoppingCart, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TopBanner from "@/components/TopBanner";
 import Header from "@/components/Header";
@@ -14,6 +15,7 @@ const ProductDetail = () => {
   const products = getProducts();
   const product = products.find((p) => p.id === id);
   const [wishlisted, setWishlisted] = useState(product ? getWishlist().includes(product.id) : false);
+  const [qty, setQty] = useState(product ? product.minOrder : 1);
 
   if (!product) {
     return (
@@ -34,6 +36,11 @@ const ProductDetail = () => {
     toast(wishlisted ? "Removed from wishlist" : "Added to wishlist");
   };
 
+  const handleAddToCart = () => {
+    addToCart(product.id, qty);
+    toast.success(`Added ${qty} item(s) to cart`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <TopBanner />
@@ -45,7 +52,6 @@ const ProductDetail = () => {
         </Link>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-          {/* Image */}
           <div className="relative rounded-xl overflow-hidden bg-secondary">
             <div className="absolute top-4 left-4 z-10 bg-discount text-discount-foreground text-sm font-bold px-3 py-1.5 rounded-lg">
               {product.discount}% OFF
@@ -53,7 +59,6 @@ const ProductDetail = () => {
             <img src={product.image} alt={product.name} className="w-full aspect-square object-cover" />
           </div>
 
-          {/* Details */}
           <div>
             <p className="text-sm text-primary font-medium mb-2">{product.category}</p>
             <h1 className="text-3xl font-bold font-display text-foreground mb-4">{product.name}</h1>
@@ -70,9 +75,7 @@ const ProductDetail = () => {
             <div className="flex items-baseline gap-3 mb-6">
               <span className="text-3xl font-bold text-primary">₹{product.price}</span>
               <span className="text-lg text-muted-foreground line-through">₹{product.originalPrice}</span>
-              <span className="text-sm font-bold text-discount bg-discount/10 px-2 py-1 rounded">
-                Save ₹{product.originalPrice - product.price}
-              </span>
+              <span className="text-sm font-bold text-discount bg-discount/10 px-2 py-1 rounded">Save ₹{product.originalPrice - product.price}</span>
             </div>
 
             <p className="text-muted-foreground mb-6 leading-relaxed">{product.description}</p>
@@ -89,20 +92,30 @@ const ProductDetail = () => {
               </ul>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-4">
               Minimum Order: <span className="font-semibold text-foreground">{product.minOrder} pieces</span>
             </p>
 
+            {/* Quantity Selector */}
+            <div className="flex items-center gap-4 mb-6">
+              <span className="text-sm font-medium text-foreground">Quantity:</span>
+              <div className="flex items-center bg-secondary rounded-lg border border-border">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="p-2.5 hover:bg-muted rounded-l-lg transition-colors">
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="px-4 text-sm font-semibold text-foreground min-w-[3rem] text-center">{qty}</span>
+                <button onClick={() => setQty(qty + 1)} className="p-2.5 hover:bg-muted rounded-r-lg transition-colors">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <span className="text-sm text-muted-foreground">Total: <span className="font-bold text-primary">₹{product.price * qty}</span></span>
+            </div>
+
             <div className="flex gap-3 mb-8">
-              <Button size="lg" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
-                Get Quote
+              <Button size="lg" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold gap-2" onClick={handleAddToCart}>
+                <ShoppingCart className="h-5 w-5" /> Add to Cart
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleWishlist}
-                className={`border-border ${wishlisted ? "text-discount border-discount" : ""}`}
-              >
+              <Button size="lg" variant="outline" onClick={handleWishlist} className={`border-border ${wishlisted ? "text-discount border-discount" : ""}`}>
                 <Heart className={`h-5 w-5 ${wishlisted ? "fill-discount" : ""}`} />
               </Button>
             </div>
@@ -122,7 +135,6 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Related Products */}
         {related.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold font-display text-foreground mb-6">Related Products</h2>
@@ -134,7 +146,6 @@ const ProductDetail = () => {
           </section>
         )}
       </main>
-
       <Footer />
     </div>
   );
