@@ -23,16 +23,16 @@ const ProductCard = ({ product }: ProductCardProps) => {
     <Link to={`/product/${product.id}`} className="group block">
       <div className="relative bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 group-hover:-translate-y-1">
         {/* Discount Tag */}
-        <div className="absolute top-3 left-3 z-10 bg-discount text-discount-foreground text-xs font-bold px-2.5 py-1 rounded-md">
-          {product.discount}% OFF
-        </div>
-
-        {/* Best Seller Tag */}
-        {product.bestSeller && (
-          <div className="absolute top-3 right-12 z-10 bg-success text-success-foreground text-xs font-bold px-2.5 py-1 rounded-md">
-            Best Seller
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+          <div className="bg-discount text-discount-foreground text-xs font-bold px-2.5 py-1 rounded-md w-fit">
+            {product.discount}% OFF
           </div>
-        )}
+          {product.bestSeller && (
+            <div className="bg-success text-success-foreground text-xs font-bold px-2.5 py-1 rounded-md w-fit">
+              Best Seller
+            </div>
+          )}
+        </div>
 
         {/* Wishlist Button */}
         <button
